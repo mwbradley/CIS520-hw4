@@ -6,7 +6,7 @@
 #define NUM_THREADS 4
 
 #define ARRAY_SIZE 2000000
-#define STRING_SIZE 16
+#define STRING_SIZE 1024
 #define ALPHABET_SIZE 26
 
 pthread_mutex_t mutexsum;			// mutex for char_counts
@@ -27,21 +27,43 @@ char getRandomChar()
 	return randChar;
 }
 
+// void init_arrays()
+// {
+//   int i, j; 
+
+//   pthread_mutex_init(&mutexsum, NULL);
+
+//   for ( i = 0; i < ARRAY_SIZE; i++) {
+// 	for ( j = 0; j < STRING_SIZE; j++ ) {
+// 		char_array[i][j] = getRandomChar();
+// 	}
+//   }
+
+//   for ( i = 0; i < ALPHABET_SIZE; i++ ) {
+//   	char_counts[i] = 0;
+//   }
+// }
+
+int num_lines = 0;
+
 void init_arrays()
 {
-  int i, j; 
+	int i, j;
 
-  pthread_mutex_init(&mutexsum, NULL);
-
-  for ( i = 0; i < ARRAY_SIZE; i++) {
-	for ( j = 0; j < STRING_SIZE; j++ ) {
-		 char_array[i][j] = getRandomChar();
+	FILE* f = fopen("~eyv/cis520/wiki_dump.txt", "r");
+	
+	if (f == NULL) {
+		printf("Error opening file\n");
+		exit(1);
 	}
+
+	pthread_mutex_init(&mutexsum, NULL);
+
+	while (num_lines < ARRAY_SIZE && fgets(char_array[num_lines], STRING_SIZE, f) != NULL) {
+    num_lines++;
   }
 
-  for ( i = 0; i < ALPHABET_SIZE; i++ ) {
-  	char_counts[i] = 0;
-  }
+  fclose(f);
 }
 
 void *count_array(void *myID)
