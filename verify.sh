@@ -5,16 +5,16 @@
 # Step 1: Test against a small hand-verified input (works anywhere)
 # Step 2: Diff across thread counts on wiki_dump.txt (Beocat only)
 #
-
+ 
 set -e
-
+ 
 EXEC=./pt1
 TESTFILE=test_input.txt
 EXPECTED=expected_output.txt
-
+ 
 # ---- Step 1: Small known-answer test ----
 echo "=== Step 1: Known-answer test ==="
-
+ 
 cat > ${TESTFILE} <<'EOF'
 ab
 bc
@@ -23,7 +23,7 @@ zzz
 A
  ~test
 EOF
-
+ 
 # Expected max ASCII per line:
 # "ab"            -> max(97, 98)           = 98
 # "bc"            -> max(98, 99)           = 99
@@ -39,7 +39,7 @@ cat > ${EXPECTED} <<'EOF'
 4: 65
 5: 126
 EOF
-
+ 
 # Build a tiny serial checker to validate against
 cat > serial_check.c <<'CEOF'
 #include <stdio.h>
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
 }
 CEOF
 gcc -Wall -O2 -std=c99 -o serial_check serial_check.c
-
+ 
 ./serial_check ${TESTFILE} > serial_out.txt
 if diff -q ${EXPECTED} serial_out.txt > /dev/null 2>&1; then
     echo "PASS: Serial checker matches hand-computed expected output"
@@ -74,31 +74,31 @@ else
     diff ${EXPECTED} serial_out.txt
     exit 1
 fi
-
+ 
 rm -f serial_check serial_check.c serial_out.txt ${TESTFILE} ${EXPECTED}
-
+ 
 # ---- Step 2: Diff across thread counts on wiki_dump.txt ----
 echo ""
 echo "=== Step 2: Cross-thread-count diff (wiki_dump.txt) ==="
-
-if [ ! -f ~eyv/cis520/wiki_dump.txt ]; then
+ 
+if [ ! -f /homes/eyv/cis520/wiki_dump.txt ]; then
     echo "SKIP: wiki_dump.txt not found (run this on Beocat)"
     exit 0
 fi
-
+ 
 if [ ! -x ${EXEC} ]; then
     echo "ERROR: ${EXEC} not found. Run 'make' first."
     exit 1
 fi
-
+ 
 echo "Running with 1 thread (reference)..."
 ${EXEC} 1 > ref_output.txt 2>/dev/null
-
+ 
 PASS=true
 for T in 2 4 8 16 32; do
     echo -n "Running with ${T} threads... "
     ${EXEC} ${T} > out_t${T}.txt 2>/dev/null
-
+ 
     if diff -q ref_output.txt out_t${T}.txt > /dev/null 2>&1; then
         echo "PASS"
     else
@@ -107,12 +107,12 @@ for T in 2 4 8 16 32; do
         PASS=false
     fi
 done
-
+ 
 echo ""
 if [ "$PASS" = true ]; then
     echo "=== ALL TESTS PASSED ==="
 else
     echo "=== SOME TESTS FAILED ==="
 fi
-
+ 
 rm -f ref_output.txt out_t*.txt

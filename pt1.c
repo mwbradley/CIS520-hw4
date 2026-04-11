@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,17 +6,18 @@
  
 int NUM_THREADS = 4;
  
-#define ARRAY_SIZE 2000000
-#define STRING_SIZE 65536
+#define INITIAL_CAPACITY 1200000
+#define READ_BUF_SIZE 65536
  
-char char_array[ARRAY_SIZE][STRING_SIZE];
-int max_vals[ARRAY_SIZE];			// per-line max ASCII value
+char **lines = NULL;				// dynamically allocated line storage
+int *max_vals = NULL;				// per-line max ASCII value
  
 int num_lines = 0;
  
 void init_arrays()
 {
-	int i;
+	int capacity = INITIAL_CAPACITY;
+	char buf[READ_BUF_SIZE];
  
 	FILE* f = fopen("/homes/eyv/cis520/wiki_dump.txt", "r");
 	
@@ -24,15 +26,42 @@ void init_arrays()
 		exit(1);
 	}
  
-	while (num_lines < ARRAY_SIZE && fgets(char_array[num_lines], STRING_SIZE, f) != NULL) {
-    num_lines++;
-  }
+	lines = malloc(capacity * sizeof(char *));
+	if (!lines) {
+		printf("Error allocating lines array\n");
+		exit(1);
+	}
  
-  fclose(f);
+	while (fgets(buf, sizeof(buf), f) != NULL) {
+		size_t len = strnlen(buf, READ_BUF_SIZE);
  
-  for ( i = 0; i < num_lines; i++ ) {
-  	max_vals[i] = 0;
-  }
+		/* grow array if needed */
+		if (num_lines >= capacity) {
+			capacity *= 2;
+			char **tmp = realloc(lines, capacity * sizeof(char *));
+			if (!tmp) {
+				printf("Error reallocating lines array\n");
+				exit(1);
+			}
+			lines = tmp;
+		}
+ 
+		lines[num_lines] = malloc(len + 1);
+		if (!lines[num_lines]) {
+			printf("Error allocating line %d\n", num_lines);
+			exit(1);
+		}
+		memcpy(lines[num_lines], buf, len + 1);
+		num_lines++;
+	}
+ 
+	fclose(f);
+ 
+	max_vals = calloc(num_lines, sizeof(int));
+	if (!max_vals) {
+		printf("Error allocating max_vals array\n");
+		exit(1);
+	}
 }
  
 void *find_max(void *myID)
@@ -54,8 +83,8 @@ void *find_max(void *myID)
 					// find max ASCII value for each line in our chunk
   for ( i = startPos; i < endPos; i++) {
 	max = 0;
-	for ( j = 0; char_array[i][j] != '\0' && char_array[i][j] != '\n'; j++ ) {
-	         theChar = (unsigned char) char_array[i][j];
+	for ( j = 0; lines[i][j] != '\0' && lines[i][j] != '\n'; j++ ) {
+	         theChar = (unsigned char) lines[i][j];
 		 if ( theChar > max ) {
 		 	max = theChar;
 		 }
@@ -85,7 +114,7 @@ int main(int argc, char* argv[])
  
 	/* optional thread count from command line */
 	if ( argc > 1 ) {
-		NUM_THREADS = atoi(argv[1]);
+		sscanf(argv[1], "%d", &NUM_THREADS);
 		if ( NUM_THREADS < 1 ) NUM_THREADS = 1;
 	}
  
@@ -126,6 +155,11 @@ int main(int argc, char* argv[])
  
 	print_results();
  
+	/* cleanup */
+	for (i = 0; i < num_lines; i++)
+		free(lines[i]);
+	free(lines);
+	free(max_vals);
 	free(threads);
 	printf("Main: program completed. Exiting.\n");
  
