@@ -17,7 +17,7 @@ void init_arrays()
 {
 	int i;
  
-	FILE* f = fopen("~eyv/cis520/wiki_dump.txt", "r");
+	FILE* f = fopen("/homes/eyv/cis520/wiki_dump.txt", "r");
 	
 	if (f == NULL) {
 		printf("Error opening file\n");
