@@ -78,7 +78,7 @@ void *find_max(void *myID)
     endPos = num_lines;
   }
  
-  printf("myID = %ld startPos = %d endPos = %d \n", (long) myID, startPos, endPos);
+  fprintf(stderr, "myID = %ld startPos = %d endPos = %d \n", (long) myID, startPos, endPos);
  
 					// find max ASCII value for each line in our chunk
   for ( i = startPos; i < endPos; i++) {
@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
 	free(lines);
 	free(max_vals);
 	free(threads);
-	printf("Main: program completed. Exiting.\n");
+	fprintf(stderr, "Main: program completed. Exiting.\n");
  
 	return 0;
 }
