@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
  
 int NUM_THREADS = 4;
  
@@ -117,23 +118,25 @@ int main(int argc, char* argv[])
 		sscanf(argv[1], "%d", &NUM_THREADS);
 		if ( NUM_THREADS < 1 ) NUM_THREADS = 1;
 	}
- 
+
 	pthread_t *threads = malloc(NUM_THREADS * sizeof(pthread_t));
 	if ( !threads ) {
 		printf("ERROR; could not allocate thread array\n");
 		exit(-1);
 	}
  
+	init_arrays();
+	/*Caps threads*/ 
+ 	if ( NUM_THREADS > num_lines ) NUM_THREADS = num_lines;
+
 	/* Initialize and set thread detached attribute */
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
- 
-	init_arrays();
- 
+
 	fprintf(stderr, "Read %d lines, using %d threads.\n", num_lines, NUM_THREADS);
  
-	/* cap threads to line count */
-	if ( NUM_THREADS > num_lines ) NUM_THREADS = num_lines;
+	struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
  
 	for (i = 0; i < NUM_THREADS; i++ ) {
 	      rc = pthread_create(&threads[i], &attr, find_max, (void *)(long)i);
@@ -154,6 +157,14 @@ int main(int argc, char* argv[])
 	}
  
 	print_results();
+
+	clock_gettime(CLOCK_MONOTONIC, &end);
+
+	double elapsed =
+		(end.tv_sec - start.tv_sec) +
+		(end.tv_nsec - start.tv_nsec) / 1e9;
+
+	printf("Elapsed time: %.6f seconds\n", elapsed);
  
 	/* cleanup */
 	for (i = 0; i < num_lines; i++)
