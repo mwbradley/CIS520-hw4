@@ -5,6 +5,8 @@ df = pd.read_csv("results.csv")
 
 mem_levels = ["1G", "3G", "1500M", "512M", "128M", "64M"]
 
+# maybe change to have the graphs overlay with different colors to use one graph instead of multiple
+
 for mem in mem_levels:
     df_m = df[df["mem"] == mem]
 
