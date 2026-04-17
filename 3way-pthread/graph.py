@@ -3,12 +3,12 @@ import matplotlib.pyplot as plt
 
 df = pd.read_csv("results.csv")
 
+df_avg = df.groupby(["threads", "mem"], as_index=False)["time"].mean()
+
 mem_levels = ["1G", "3G", "1500M", "512M", "128M", "64M"]
 
-# maybe change to have the graphs overlay with different colors to use one graph instead of multiple
-
 for mem in mem_levels:
-    df_m = df[df["mem"] == mem]
+    df_m = df_avg[df_avg["mem"] == mem]
 
     if df_m.empty:
         print(f"No data for {mem}")

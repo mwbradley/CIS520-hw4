@@ -14,8 +14,8 @@ MEM=${2:-1G}
 sbatch <<EOF
 #!/bin/bash
 #SBATCH --job-name=pt1_t${THREADS}
-#SBATCH --output=pt1_t${THREADS}_m${MEM}_%j.out
-#SBATCH --error=pt1_t${THREADS}_m${MEM}_%j.err
+#SBATCH --output=pt1_t${THREADS}_m${MEM}.out
+#SBATCH --error=pt1_t${THREADS}_m${MEM}.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=${THREADS}
@@ -28,13 +28,25 @@ module load CMake/3.23.1-GCCcore-11.3.0 foss/2022a
 echo "=== pthread max-char ==="
 echo "Threads:      ${THREADS}"
 echo "Mem/core:     ${MEM}"
-echo "Host:         \$(hostname)"
-echo "Start:        \$(date)"
+echo "Host:         $(hostname)"
+echo "Start:	    $(date)"
 echo "========================"
 
-time ./pt1 ${THREADS}
+CSV=results.csv
+if [ ! -f "\$CSV" ]; then
+    echo "threads,mem,time" >> "\$CSV"
+fi
+
+TIMEFORMAT='%R'
+ELAPSED=\$( { time ./pt1 ${THREADS}; } 2>&1 )
+
+WALL_TIME=\$(echo "\$ELAPSED" | tail -1)
 
 echo "End: \$(date)"
+
+echo "${THREADS},${MEM},\$WALL_TIME" >> "\$CSV"
+
+#echo "End: \$(date)"
 EOF
 
 echo "Submitted: ${THREADS} threads, ${MEM}/core"

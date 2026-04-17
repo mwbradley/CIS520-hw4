@@ -5,3 +5,5 @@ module load CMake/3.23.1-GCCcore-11.3.0 foss/2022a OpenMPI/4.1.4-GCC-11.3.0 CUDA
 
 module load SciPy-bundle/2022.05-foss-2022a
 module load matplotlib
+
+gcc -O2 -pthread ../pt1.c -o pt1
