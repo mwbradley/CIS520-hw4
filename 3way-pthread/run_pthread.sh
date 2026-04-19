@@ -45,8 +45,6 @@ WALL_TIME=\$(echo "\$ELAPSED" | tail -1)
 echo "End: \$(date)"
 
 echo "${THREADS},${MEM},\$WALL_TIME" >> "\$CSV"
-
-#echo "End: \$(date)"
 EOF
 
 echo "Submitted: ${THREADS} threads, ${MEM}/core"

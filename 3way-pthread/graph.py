@@ -13,7 +13,7 @@ for mem in mem_levels:
     if df_m.empty:
         print(f"No data for {mem}")
         continue
-
+ 
     df_m = df_m.sort_values("threads")
 
     threads = df_m["threads"]
