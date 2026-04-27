@@ -11,17 +11,7 @@
 # -I and -L for MPI stuff is not necessary
 #
  
-CC        = gcc
 CFLAGS    = -Wall -O2 -std=c99
- 
-#
-# Modify TOPDIR if you use your own include files and library files
-#
- 
-PROGRAM   = pt1			# name of the binary
-SRCS      = pt1.c		# source file
-OBJS      = $(SRCS:.c=.o)		# object file
-LDFLAGS   = -lpthread
  
 #
 # Targets
@@ -29,13 +19,13 @@ LDFLAGS   = -lpthread
  
 default: all
  
-all: $(PROGRAM)
+all: pt1 pt2
  
-$(PROGRAM): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(PROGRAM) $(LDFLAGS)
+pt1: pt1.c
+	gcc $(CFLAGS) -o pt1 pt1.c -lpthread
  
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+pt2: pt2.c
+	mpicc $(CFLAGS) -o pt2 pt2.c
  
 clean:
-	/bin/rm -f $(OBJS) $(PROGRAM)
+	/bin/rm -f pt1 pt2
