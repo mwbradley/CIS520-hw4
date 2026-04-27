@@ -5,7 +5,6 @@
 #include <string.h>
 #include <time.h>
  
-//#define NUM_THREADS 4
 int NUM_THREADS;
  
 #define INITIAL_CAPACITY 1200000
@@ -13,7 +12,8 @@ int NUM_THREADS;
  
 int num_lines = 0;
 char **lines = NULL;				// dynamically allocated line storage
-int *max_vals = NULL;				// per-line max ASCII value
+int *max_vals = NULL;				// per-line max ASCII value (rank 0 only, full size)
+int *local_max_vals = NULL;			// per-rank local results
  
 void init_arrays()
 {
@@ -35,7 +35,6 @@ void init_arrays()
 	while (fgets(buf, sizeof(buf), f) != NULL) {
 		size_t len = strnlen(buf, READ_BUF_SIZE);
  
-		/* grow array if needed */
 		if (num_lines >= capacity) {
 			capacity *= 2;
 			char **tmp = realloc(lines, capacity * sizeof(char *));
@@ -56,39 +55,28 @@ void init_arrays()
 	}
  
 	fclose(f);
- 
-	max_vals = calloc(num_lines, sizeof(int));
-	if (!max_vals) {
-		fprintf(stderr, "Error allocating max_vals array\n");
-		MPI_Abort(MPI_COMM_WORLD, 1);
-	}
 }
  
-void find_max(int *rank)
+void find_max(int rank, int chunk_size, int my_count)
 {
 	int i, j;
 	unsigned char theChar;
 	int max;
-	int myID = *rank;
 	
-	int startPos = myID * (num_lines / NUM_THREADS);
-	int endPos = startPos + (num_lines / NUM_THREADS);
+	int startPos = rank * chunk_size;
+	int endPos = startPos + my_count;
 	
-	/* last rank picks up any remainder lines */
-	if (myID == NUM_THREADS - 1) {
-		endPos = num_lines;
-	}
-	
-	fprintf(stderr, "rank = %d startPos = %d endPos = %d\n", myID, startPos, endPos);
+	fprintf(stderr, "rank = %d startPos = %d endPos = %d\n", rank, startPos, endPos);
  
-	// find max ASCII value for each line in our chunk
-	for (i = startPos; i < endPos; i++) {
+	/* find max ASCII value for each line in our chunk */
+	for (i = 0; i < my_count; i++) {
 		max = 0;
-		for (j = 0; lines[i][j] != '\0' && lines[i][j] != '\n'; j++) {
-			theChar = (unsigned char) lines[i][j];
+		int line_idx = startPos + i;
+		for (j = 0; lines[line_idx][j] != '\0' && lines[line_idx][j] != '\n'; j++) {
+			theChar = (unsigned char) lines[line_idx][j];
 			if (theChar > max) max = theChar;
 		}
-		max_vals[i] = max;
+		local_max_vals[i] = max;
 	}
 }
  
@@ -106,64 +94,70 @@ int main(int argc, char* argv[])
 	int i, rc;
 	int numtasks, rank;
  
-	rc = MPI_Init(&argc,&argv);
+	rc = MPI_Init(&argc, &argv);
 	if (rc != MPI_SUCCESS) {
 		fprintf(stderr, "Error starting MPI program. Terminating.\n");
 		MPI_Abort(MPI_COMM_WORLD, rc);
 	}
  
-	MPI_Comm_size(MPI_COMM_WORLD,&numtasks);
-	MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
  
 	NUM_THREADS = numtasks;
 	fprintf(stderr, "size = %d rank = %d\n", numtasks, rank);
  
 	/*
 	 * Every rank reads the file independently.
-	 * Beocat uses a shared filesystem (NFS), so all ranks
-	 * can access wiki_dump.txt directly. This avoids the
-	 * complexity and overhead of broadcasting 1.7GB of
-	 * variable-length string data.
+	 * Beocat uses NFS, so all ranks can access the file directly.
+	 * This avoids the overhead of broadcasting 1.7GB of strings.
 	 */
 	init_arrays();
  
 	fprintf(stderr, "Rank %d: read %d lines.\n", rank, num_lines);
  
-	/* synchronize before timing the computation */
-	MPI_Barrier(MPI_COMM_WORLD);
- 
-	struct timespec start, end;
-	clock_gettime(CLOCK_MONOTONIC, &start);
- 
-	/* each rank computes max for its chunk */
-	find_max(&rank);
- 
-	/*
-	 * Gather results to rank 0.
-	 * Each rank computed max_vals for indices [startPos, endPos).
-	 * We use MPI_Gatherv since the last rank may have extra lines.
-	 */
+	/* compute chunk sizes */
 	int chunk_size = num_lines / numtasks;
-	int *recvcounts = NULL;
-	int *displs = NULL;
- 
-	if (rank == 0) {
-		recvcounts = malloc(numtasks * sizeof(int));
-		displs = malloc(numtasks * sizeof(int));
-		for (i = 0; i < numtasks; i++) {
-			displs[i] = i * chunk_size;
-			recvcounts[i] = chunk_size;
-		}
-		/* last rank gets the remainder */
-		recvcounts[numtasks - 1] = num_lines - (numtasks - 1) * chunk_size;
-	}
- 
 	int my_count = chunk_size;
 	if (rank == numtasks - 1) {
 		my_count = num_lines - (numtasks - 1) * chunk_size;
 	}
  
-	MPI_Gatherv(&max_vals[rank * chunk_size], my_count, MPI_INT,
+	/* allocate local results buffer for this rank's chunk */
+	local_max_vals = calloc(my_count, sizeof(int));
+	if (!local_max_vals) {
+		fprintf(stderr, "Error allocating local_max_vals on rank %d\n", rank);
+		MPI_Abort(MPI_COMM_WORLD, 1);
+	}
+ 
+	/* synchronize before timing */
+	MPI_Barrier(MPI_COMM_WORLD);
+ 
+	struct timespec start, end;
+	clock_gettime(CLOCK_MONOTONIC, &start);
+ 
+	/* compute max for this rank's chunk into local_max_vals */
+	find_max(rank, chunk_size, my_count);
+ 
+	/* gather all local results into max_vals on rank 0 */
+	int *recvcounts = NULL;
+	int *displs = NULL;
+ 
+	if (rank == 0) {
+		max_vals = malloc(num_lines * sizeof(int));
+		recvcounts = malloc(numtasks * sizeof(int));
+		displs = malloc(numtasks * sizeof(int));
+		if (!max_vals || !recvcounts || !displs) {
+			fprintf(stderr, "Error allocating gather buffers\n");
+			MPI_Abort(MPI_COMM_WORLD, 1);
+		}
+		for (i = 0; i < numtasks; i++) {
+			displs[i] = i * chunk_size;
+			recvcounts[i] = chunk_size;
+		}
+		recvcounts[numtasks - 1] = num_lines - (numtasks - 1) * chunk_size;
+	}
+ 
+	MPI_Gatherv(local_max_vals, my_count, MPI_INT,
 		    max_vals, recvcounts, displs, MPI_INT,
 		    0, MPI_COMM_WORLD);
  
@@ -182,8 +176,9 @@ int main(int argc, char* argv[])
 	for (i = 0; i < num_lines; i++)
 		free(lines[i]);
 	free(lines);
-	free(max_vals);
+	free(local_max_vals);
 	if (rank == 0) {
+		free(max_vals);
 		free(recvcounts);
 		free(displs);
 	}
