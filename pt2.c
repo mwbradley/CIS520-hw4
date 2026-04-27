@@ -175,7 +175,7 @@ int main(int argc, char* argv[])
  
 	if (rank == 0) {
 		print_results();
-		fprintf(stderr, "Elapsed time: %.6f seconds\n", elapsed);
+		printf("Elapsed time: %.6f seconds\n", elapsed);
 	}
  
 	/* cleanup */
