@@ -19,13 +19,16 @@ CFLAGS    = -Wall -O2 -std=c99
  
 default: all
  
-all: pt1 pt2
+all: pt1 pt2 pt3
  
 pt1: pt1.c
 	gcc $(CFLAGS) -o pt1 pt1.c -lpthread
  
 pt2: pt2.c
 	mpicc $(CFLAGS) -o pt2 pt2.c
+
+pt3: pt3.c
+	gcc $(CFLAGS) -fopenmp -o pt3 pt3.c
  
 clean:
 	/bin/rm -f pt1 pt2
