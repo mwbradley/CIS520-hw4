@@ -15,7 +15,7 @@ int *max_vals = NULL;				// per-line max ASCII value
  
 int num_lines = 0;
  
-void init_arrays()
+void init_arrays(int max_lines)
 {
 	int capacity = INITIAL_CAPACITY;
 	char buf[READ_BUF_SIZE];
@@ -33,7 +33,7 @@ void init_arrays()
 		exit(1);
 	}
  
-	while (fgets(buf, sizeof(buf), f) != NULL) {
+	while (fgets(buf, sizeof(buf), f) != NULL && num_lines < max_lines) {
 		size_t len = strnlen(buf, READ_BUF_SIZE);
  
 		/* grow array if needed */
@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
 		exit(-1);
 	}
  
-	init_arrays();
+	init_arrays(100000);
 	/*Caps threads*/ 
  	if ( NUM_THREADS > num_lines ) NUM_THREADS = num_lines;
 

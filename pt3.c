@@ -14,7 +14,7 @@ int num_lines = 0;
 char **lines = NULL;                // dynamically allocated line storage
 int *max_vals = NULL;               // shared per-line max ASCII value
 
-void init_arrays()
+void init_arrays(int max_lines)
 {
     int capacity = INITIAL_CAPACITY;
     char buf[READ_BUF_SIZE];
@@ -31,7 +31,7 @@ void init_arrays()
         exit(1);
     }
 
-    while (fgets(buf, sizeof(buf), f) != NULL) {
+    while (fgets(buf, sizeof(buf), f) != NULL && num_lines < max_lines) {
         size_t len = strnlen(buf, READ_BUF_SIZE);
 
         if (num_lines >= capacity) {
@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
     /* Method to start up parallel threads dynamically */
     omp_set_num_threads(NUM_THREADS);
 
-    init_arrays();
+    init_arrays(100000);
 
     fprintf(stderr, "Read %d lines, using %d threads (OpenMP).\n", num_lines, NUM_THREADS);
 

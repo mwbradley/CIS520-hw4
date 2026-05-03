@@ -15,7 +15,7 @@ char **lines = NULL;				// dynamically allocated line storage
 int *max_vals = NULL;				// per-line max ASCII value (rank 0 only, full size)
 int *local_max_vals = NULL;			// per-rank local results
  
-void init_arrays()
+void init_arrays(int max_lines)
 {
 	int capacity = INITIAL_CAPACITY;
 	char buf[READ_BUF_SIZE];
@@ -32,7 +32,7 @@ void init_arrays()
 		MPI_Abort(MPI_COMM_WORLD, 1);
 	}
  
-	while (fgets(buf, sizeof(buf), f) != NULL) {
+	while (fgets(buf, sizeof(buf), f) != NULL && num_lines < max_lines) {
 		size_t len = strnlen(buf, READ_BUF_SIZE);
  
 		if (num_lines >= capacity) {
@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
 	 * Beocat uses NFS, so all ranks can access the file directly.
 	 * This avoids the overhead of broadcasting 1.7GB of strings.
 	 */
-	init_arrays();
+	init_arrays(100000);
  
 	fprintf(stderr, "Rank %d: read %d lines.\n", rank, num_lines);
  
