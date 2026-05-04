@@ -3,29 +3,31 @@ import matplotlib.pyplot as plt
 
 df = pd.read_csv("results.csv")
 
-df_avg = df.groupby(["threads", "mem"], as_index=False)["time"].mean()
+df_avg = df.groupby(["input_size", "threads", "mem"], as_index=False)["time"].mean()
 
-mem_levels = ["1G", "3G", "1500M", "512M", "128M", "64M"]
+mem_levels = ["1G", "3G", "1500M", "512M"]
+input_sizes = [1000, 10000, 100000, 1200000]
 
-for mem in mem_levels:
-    df_m = df_avg[df_avg["mem"] == mem]
+for size in input_sizes:
+    for mem in mem_levels:
+        df_filtered = df_avg[(df_avg["mem"] == mem) & (df_avg["input_size"] == size)]
 
-    if df_m.empty:
-        print(f"No data for {mem}")
-        continue
+        if df_filtered.empty:
+            print(f"No data for Size: {size}, Mem: {mem}")
+            continue
  
-    df_m = df_m.sort_values("threads")
+        df_filtered = df_filtered.sort_values("threads")
 
-    threads = df_m["threads"]
-    time = df_m["time"]
+        threads = df_filtered["threads"]
+        time = df_filtered["time"]
 
-    baseline = time.iloc[0]
-    speedup = baseline / time
+        baseline = time.iloc[0]
+        speedup = baseline / time
 
-    plt.plot(threads, speedup, marker='o')
-    plt.xlabel("Threads")
-    plt.ylabel("Speedup")
-    plt.title(f"Pthread Speedup ({mem} memory)")
+        plt.plot(threads, speedup, marker='o')
+        plt.xlabel("Threads")
+        plt.ylabel("Speedup")
+        plt.title(f"Pthread Speedup ({mem} memory, {size} lines)")
 
-    plt.savefig(f"speedup_{mem}.png")
-    plt.clf()
+        plt.savefig(f"speedup_pthread_size{size}_{mem}.png")
+        plt.clf()

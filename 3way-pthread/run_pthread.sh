@@ -10,6 +10,7 @@
 
 THREADS=${1:-4}
 MEM=${2:-1G}
+INPUT_SIZE=${3:-1200000}
 
 sbatch <<EOF
 #!/bin/bash
@@ -38,13 +39,13 @@ if [ ! -f "\$CSV" ]; then
 fi
 
 TIMEFORMAT='%R'
-ELAPSED=\$( { time ./pt1 ${THREADS}; } 2>&1 )
+ELAPSED=\$( { time ./pt1 ${THREADS} ${INPUT_SIZE}; } 2>&1 | grep -v "Read\|Main\|Elapsed" )
 
 WALL_TIME=\$(echo "\$ELAPSED" | tail -1)
 
 echo "End: \$(date)"
 
-echo "${THREADS},${MEM},\$WALL_TIME" >> "\$CSV"
+echo "${THREADS},${MEM},${INPUT_SIZE},\$WALL_TIME" >> "\$CSV"
 EOF
 
 echo "Submitted: ${THREADS} threads, ${MEM}/core"

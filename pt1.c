@@ -15,7 +15,7 @@ int *max_vals = NULL;				// per-line max ASCII value
  
 int num_lines = 0;
  
-void init_arrays(int max_lines)
+void init_arrays(int max_input_size)
 {
 	int capacity = INITIAL_CAPACITY;
 	char buf[READ_BUF_SIZE];
@@ -33,7 +33,7 @@ void init_arrays(int max_lines)
 		exit(1);
 	}
  
-	while (fgets(buf, sizeof(buf), f) != NULL && num_lines < max_lines) {
+	while (num_lines < max_input_size && fgets(buf, sizeof(buf), f) != NULL) {
 		size_t len = strnlen(buf, READ_BUF_SIZE);
  
 		/* grow array if needed */
@@ -117,6 +117,11 @@ int main(int argc, char* argv[])
 	if ( argc > 1 ) {
 		sscanf(argv[1], "%d", &NUM_THREADS);
 		if ( NUM_THREADS < 1 ) NUM_THREADS = 1;
+	}
+
+	int max_input_size = 2000000; // default to more than the whole file
+	if ( argc > 2 ) {
+		sscanf(argv[2], "%d", &max_input_size);
 	}
 
 	pthread_t *threads = malloc(NUM_THREADS * sizeof(pthread_t));
