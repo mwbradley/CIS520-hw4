@@ -26,9 +26,9 @@ pt1: pt1.c
  
 pt2: pt2.c
 	mpicc $(CFLAGS) -o pt2 pt2.c
-
+ 
 pt3: pt3.c
 	gcc $(CFLAGS) -fopenmp -o pt3 pt3.c
  
 clean:
-	/bin/rm -f pt1 pt2
+	/bin/rm -f pt1 pt2 pt3
